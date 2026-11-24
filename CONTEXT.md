@@ -143,6 +143,23 @@ Idée examinée : base locale + fichier CHIFFRÉ synchronisé via cloud (Nextclo
 
 **✨ TÂCHE À NOTER (demande utilisateur) : trouver ou rédiger un SKILL DE PRÉ-PRODUCTION** — un skill qui encadre toute phase de conception AVANT tout codage : cadrage du besoin, exploration des options, pour/contre documentés, doc de conception, décisions figées. Généralisation de la leçon « charte avant maquette » (n° 20) : « conception avant code ». À chercher dans le registre Mistral, à rédiger sinon.
 
+## 🖥️ LE SERVEUR LAN EST MONTÉ (24 nov. 2026) — phases A à E complètes
+
+L'app Gimaweb (produit, repo D0cm4c/Gimaweb) tourne **en service sur le portable Ubuntu de l'atelier** :
+- **Machine** : portable Ubuntu Server 26.04, hostname `gimaweb`, user admin `user01-gimaweb`, user de service `adw`
+- **Réseau** : Ethernet prioritaire `192.168.0.145` (0,03 ms !), wifi backup `192.168.0.106` (metrics 100/600 — Ubuntu gère tout seul) ; réservations DHCP en attente du responsable réseau asbl
+- **Le produit** : `/opt/gimaweb` — cloné, `npm ci`, `.env` (ADMIN_HASH_SHA256 + BACKUP_PASSPHRASE — **jamais en clair nulle part ailleurs**), dossiers `data/` et `data/sauvegardes/`
+- **Service** : `gimaweb.service` systemd — actif, enabled (boot), Restart=on-failure, User=adw, port 3000 ; sonde `/api/sante`
+- **Sauvegarde** : `gimaweb-sauvegarde.service` (oneshot) + `.timer` 02h30 — première sauvegarde testée : `gimaweb-2026-11-24-1210.db.aes` (213 Ko, AES-256-GCM)
+- **Flux** : pull deployment (`git pull && npm ci && systemctl restart gimaweb`) — le serveur ne pousse jamais sur GitHub
+- Il reste : **Phase F** (données — import XML des 3 806 membres ou restauration de base), le branchement Nextcloud (NEXTCLOUD_* vides pour l'instant), le BOOKINGS_SECRET (plugin WP), la finition réseau (réservations, câble définitif à l'asbl)
+
+**LE MODE « ASSISTANCE TERMINAL PAS-À-PAS »** (demande utilisateur, à graver en skill Mistral — quatre règles) :
+1. **1 commande → 1 retour → attendre** — jamais empiler ni anticiper les branches
+2. **Anatomie de chaque commande** sous la commande, format : `🔑 sudo → mode administrateur` — émoji par morceau, **le verbe d'abord, TOUS les morceaux** (même nano)
+3. **Vérifier où on tape avant de diagnostiquer** (`hostname` — l'erreur classique : 3 terminaux, la commande dans le mauvais)
+4. **Bienveillance** : « rien = succès », les erreurs sont des classiques (« pas con du tout »), les secrets jamais en clair dans le chat
+
 ## 🧠 Leçons apprises (méthodes qui ont marché)
 
 1. PRs incrémentales, une fonctionnalité complète par PR, fusionnées dans l'ordre.
@@ -188,6 +205,9 @@ Idée examinée : base locale + fichier CHIFFRÉ synchronisé via cloud (Nextclo
 20. **Le processus de design validé** (leçon méthode, co-construite) : charte AVANT maquette — direction en mots → charte (palette avec rôles + interdits) → maquette clé → transposition 3 couches → audit par grep et par l'utilisateur. Une règle écrite = un jugement objectif (l'audit #136 l'a prouvé).
 18. **API officielle MEC testée avec clé (22 oct. 2026)** : `wp-json/mec/v1.0` fonctionne en server-to-server — `/events` (contenu complet), `/events/{id}/tickets` (TARIFS enfin disponibles), `/next-occurrences` (dates structurées). **`/bookers` n'existe pas** (404) : la synchro des inscriptions devra passer par le plugin WP prévu ou une lecture directe de `wp_mec_bookings`. CORS bloqué côté navigateur (header custom) : API réservée au futur serveur. Décisions reportées dans `docs/BACKEND.md` §7.
 21. **`e.target` (figé à la frappe) vs `activeElement` (focus courant)** (nov. 2026, bug du pointage) : quand un handler déplace le focus pendant un keydown, un second listener sur le même événement voit un activeElement déjà changé — la garde sur activeElement est contournable. Pour distinguer « cette frappe vient du champ A » dans un listener global, toujours vérifier `e.target` : la cible de l'événement ne bouge pas, le focus si.
+22. **Le `.env` n'est PAS auto-chargé** (Jour du Serveur) : un serveur Node qui lit `process.env` ne voit le `.env` QUE par son chargeur (dotenv, systemd EnvironmentFile). En test manuel : `set -a && . ./.env && set +a && node ...` — et le shell réclame des quotes autour des valeurs avec espaces (`command not found` = la faute typique).
+23. **Un process en avant-plan vit et meurt avec son terminal** (Jour du Serveur) : fermer le terminal/SSH = SIGHUP = app morte. C'est toute la raison d'être de systemd (enable --now = immortel). Le test de survie : fermer, re-ping.
+24. **La pédagogie pas-à-pas est un contrat explicite** (Jour du Serveur, demande utilisateur 3 fois) : 1 commande, 1 retour, j'attends. Toute anticipation (blocs de commandes, tableaux de branches) est un échec de l'assistant. Devenu le skill « assistance-terminal-pas-a-pas ».
 
 19. **Cartographie complète de l'API officielle MEC (22 oct. 2026, tests réels)** : `GET /events/{id}` renvoie TOUT (lieu, organisateur, tarifs, places restantes/Complet, catégories avec noms, dates structurées, photos) → **les modules 1-3 du plugin prévu sont couverts par l'API**, le plugin WP se réduit au module bookings. `/config/attendee-fields` : le formulaire MEC récolte déjà email/nom/date naissance/adresse/CP/tél/genre/statut (≈ schéma members) mais **PAS le n° de membre** — à ajouter côté MEC (maillon fort du matching). **Le préfill de modale est PRIORITÉ ABSOLUE utilisateur** : snippet complet prêt dans `docs/BACKEND.md` §8 (sélecteurs à ajuster avec le HTML réel de la modale + champ n° membre à créer côté MEC d'abord).
 
